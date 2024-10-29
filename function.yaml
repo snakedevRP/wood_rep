@@ -1,0 +1,50 @@
+metadata:
+  name: yolov8-wood
+  namespace: cvat
+  annotations:
+    name: YOLO v8 Wood
+    type: detector
+    spec: |
+      [
+        { "id": 0, "name": "wood", "type": "rectangle" }
+      ]
+
+spec:
+  description: YOLO v8 Wood Detector
+  runtime: 'python:3.9'
+  handler: main:handler
+  eventTimeout: 30s
+  
+  build:
+    image: cvat.yolov8.wood
+    baseImage: ubuntu:22.04
+    
+    directives:
+      preCopy:
+        - kind: USER
+          value: root
+        - kind: RUN
+          value: apt update && apt install --no-install-recommends -y python3-pip libgl1-mesa-glx libglib2.0-0 git
+        - kind: RUN
+          value: pip install ultralytics==8.0.0 supervision numpy pillow opencv-python-headless pyyaml
+        - kind: WORKDIR
+          value: /opt/nuclio
+        - kind: COPY
+          value: wood.pt /opt/nuclio/
+        - kind: RUN
+          value: ln -s /usr/bin/python3 /usr/bin/python
+
+  triggers:
+    myHttpTrigger:
+      maxWorkers: 1
+      kind: 'http'
+      workerAvailabilityTimeoutMilliseconds: 10000
+      attributes:
+        maxRequestBodySize: 33554432 # 32MB
+
+  platform:
+    attributes:
+      restartPolicy:
+        name: always
+        maximumRetryCount: 3
+      mountMode: volume
